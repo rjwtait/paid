@@ -1,118 +1,120 @@
-/**
- * Sample React Native App
- * https://github.com/facebook/react-native
- *
- * @format
- */
 
-import React from 'react';
-import type {PropsWithChildren} from 'react';
+import React from 'react'
 import {
+  ActivityIndicator,
+  FlatList,
+  ListRenderItemInfo,
   SafeAreaView,
-  ScrollView,
   StatusBar,
   StyleSheet,
   Text,
   useColorScheme,
   View,
-} from 'react-native';
+} from 'react-native'
 
-import {
-  Colors,
-  DebugInstructions,
-  Header,
-  LearnMoreLinks,
-  ReloadInstructions,
-} from 'react-native/Libraries/NewAppScreen';
 
-type SectionProps = PropsWithChildren<{
-  title: string;
-}>;
-
-function Section({children, title}: SectionProps): JSX.Element {
-  const isDarkMode = useColorScheme() === 'dark';
-  return (
-    <View style={styles.sectionContainer}>
-      <Text
-        style={[
-          styles.sectionTitle,
-          {
-            color: isDarkMode ? Colors.white : Colors.black,
-          },
-        ]}>
-        {title}
-      </Text>
-      <Text
-        style={[
-          styles.sectionDescription,
-          {
-            color: isDarkMode ? Colors.light : Colors.dark,
-          },
-        ]}>
-        {children}
-      </Text>
-    </View>
-  );
+type ArticleProps = {
+  title: string
+  publisherName: string
+  author: string
+  description: string
+  imageUrl: string
+  url: string
 }
 
-function App(): JSX.Element {
-  const isDarkMode = useColorScheme() === 'dark';
+const Article = (article: ArticleProps) => (
+  <View style={styles.item}>
+    <View style={styles.header}>
+      <Text style={styles.name}>{article.title}</Text>
+    </View>
+    <Text style={styles.description}>{article.description}</Text>
+  </View>
+)
 
-  const backgroundStyle = {
-    backgroundColor: isDarkMode ? Colors.darker : Colors.lighter,
-  };
+//TODO: secure this
+const API_KEY = "c069630adc5c4fd893156917b7da614d"
+
+type SourceProps = {
+  id: string
+  name: string
+}
+type NewsProps = {
+  content: string
+  publishedAt: string
+  source: SourceProps
+} & ArticleProps
+
+function App(): JSX.Element {  
+  const [data, setData] = React.useState([])
+
+  React.useEffect(() => {
+    //todo: preload headlines
+    search("test")
+  }, [])
+
+  function search(query: string) {
+    fetch(`https://newsapi.org/v2/everything?q=${query}&apiKey=${API_KEY}`)
+      .then((res) => res.json())
+      .then((data) => {
+        const filteredData = data.articles.map((item: NewsProps) => {
+          const {content, publishedAt, source, ...article} = item
+          article.publisherName = source.name
+          return article
+        })
+        setData(filteredData)
+      })
+  }
+
 
   return (
-    <SafeAreaView style={backgroundStyle}>
+    <SafeAreaView style={styles.background}>
       <StatusBar
-        barStyle={isDarkMode ? 'light-content' : 'dark-content'}
-        backgroundColor={backgroundStyle.backgroundColor}
+        barStyle={'light-content'}
+        backgroundColor={styles.background.backgroundColor}
       />
-      <ScrollView
-        contentInsetAdjustmentBehavior="automatic"
-        style={backgroundStyle}>
-        <Header />
-        <View
-          style={{
-            backgroundColor: isDarkMode ? Colors.black : Colors.white,
-          }}>
-          <Section title="Step One">
-            Edit <Text style={styles.highlight}>App.tsx</Text> to change this
-            screen and then come back to see your edits.
-          </Section>
-          <Section title="See Your Changes">
-            <ReloadInstructions />
-          </Section>
-          <Section title="Debug">
-            <DebugInstructions />
-          </Section>
-          <Section title="Learn More">
-            Read the docs to discover what to do next:
-          </Section>
-          <LearnMoreLinks />
-        </View>
-      </ScrollView>
+      {/*<Search/>*/}
+      {
+        !data ? 
+          <ActivityIndicator size="large"/>
+        :
+          <FlatList
+            data={data}
+            style={styles.list}
+            renderItem={({item}: ListRenderItemInfo<ArticleProps>) => 
+              <Article {...item}/>
+            }
+          />
+      }
     </SafeAreaView>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
-  sectionContainer: {
-    marginTop: 32,
-    paddingHorizontal: 24,
+  background: {
+    backgroundColor: "white"
   },
-  sectionTitle: {
-    fontSize: 24,
-    fontWeight: '600',
+  item: {
+    backgroundColor: 'white',
+    marginVertical: 5
   },
-  sectionDescription: {
-    marginTop: 8,
-    fontSize: 18,
-    fontWeight: '400',
+  header: {
+    flex: 1,
+    flexDirection: "row",
+    justifyContent: "space-between"
   },
-  highlight: {
-    fontWeight: '700',
+  list: {
+    marginTop: 40
   },
-});
+  name: {
+    fontSize: 20,
+    fontWeight: '300',
+    color: "black"
+  },
+  description: {
+    fontSize: 16,
+    color: "darkgrey",
+    fontWeight: '200'
+  }
+})
 
-export default App;
+export default App
