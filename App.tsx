@@ -45,7 +45,10 @@ function App(): JSX.Element {
           const filteredData = processNewsResponse(data.articles)
           setData(filteredData)
           setErrorMessage('')
+        } else {
+          setErrorMessage('No Results Found')
         }
+
         setIsLoading(false)
       })
       .catch((error) => {
