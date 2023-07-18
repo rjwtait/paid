@@ -3,66 +3,63 @@ import React from 'react'
 import {
   ActivityIndicator,
   FlatList,
+  Keyboard,
   ListRenderItemInfo,
   SafeAreaView,
   StatusBar,
   StyleSheet,
   Text,
-  useColorScheme,
-  View,
 } from 'react-native'
+import { processNewsResponse } from './News'
+import { Article, ArticleProps } from './Article'
+import { SearchBar } from './SearchBar'
 
-
-type ArticleProps = {
-  title: string
-  publisherName: string
-  author: string
-  description: string
-  imageUrl: string
-  url: string
-}
-
-const Article = (article: ArticleProps) => (
-  <View style={styles.item}>
-    <View style={styles.header}>
-      <Text style={styles.name}>{article.title}</Text>
-    </View>
-    <Text style={styles.description}>{article.description}</Text>
-  </View>
-)
 
 //TODO: secure this
 const API_KEY = "c069630adc5c4fd893156917b7da614d"
 
-type SourceProps = {
-  id: string
-  name: string
-}
-type NewsProps = {
-  content: string
-  publishedAt: string
-  source: SourceProps
-} & ArticleProps
 
 function App(): JSX.Element {  
   const [data, setData] = React.useState([])
+  const [inputText, onChangeInputText] = React.useState('');
+  const [errorMessage, setErrorMessage] = React.useState('');
 
-  React.useEffect(() => {
-    //todo: preload headlines
-    search("test")
-  }, [])
+  let flatListRef: FlatList<ArticleProps> | null = null
 
-  function search(query: string) {
-    fetch(`https://newsapi.org/v2/everything?q=${query}&apiKey=${API_KEY}`)
+  //todo: preload top headlines with useEffect
+
+  function search(query: string): void {
+    if (query.length == 0) {
+      // todo: show top headlines
+      Keyboard.dismiss()
+      return
+    }
+
+    // todo: add paging fetch(`https://newsapi.org/v2/everything?pageSize=50&page=1&q=${query}&apiKey=${API_KEY}`)
+    fetch(`https://newsapi.org/v2/everything?&q=${query}&apiKey=${API_KEY}`)
       .then((res) => res.json())
       .then((data) => {
-        const filteredData = data.articles.map((item: NewsProps) => {
-          const {content, publishedAt, source, ...article} = item
-          article.publisherName = source.name
-          return article
-        })
-        setData(filteredData)
+        if (data && data.articles) {
+          const filteredData = processNewsResponse(data.articles)
+          setData(filteredData)
+          setErrorMessage('')
+          // TODO scroll to top of list
+        }
       })
+      .catch((error) => {
+        setData([])
+        setErrorMessage(error.message)
+      })
+  }
+
+  function onSubmit() {
+    // show a loading spinner while waiting for response
+    setData([])
+    Keyboard.dismiss()
+    search(inputText)
+    if (flatListRef) {
+      flatListRef.scrollToOffset({ animated: false, offset: 0 });
+    }
   }
 
 
@@ -72,12 +69,23 @@ function App(): JSX.Element {
         barStyle={'light-content'}
         backgroundColor={styles.background.backgroundColor}
       />
-      {/*<Search/>*/}
+      <SearchBar 
+        inputText={inputText}
+        onChange={onChangeInputText}
+        onSubmit={onSubmit}
+      />
       {
-        !data ? 
-          <ActivityIndicator size="large"/>
+        data.length == 0 ? 
+          errorMessage.length > 0 ?
+            <Text style={styles.error}>{errorMessage}</Text>
+          : inputText.length > 0 ?
+            <ActivityIndicator style={styles.indicator} size={'large'}/>
+          :
+            <Text style={styles.error}>Please Enter A Search Term</Text> 
         :
+          // todo: handle large list size
           <FlatList
+            ref={(ref) => { flatListRef = ref }}
             data={data}
             style={styles.list}
             renderItem={({item}: ListRenderItemInfo<ArticleProps>) => 
@@ -91,29 +99,21 @@ function App(): JSX.Element {
 
 const styles = StyleSheet.create({
   background: {
+    flex: 1,
     backgroundColor: "white"
   },
-  item: {
-    backgroundColor: 'white',
-    marginVertical: 5
-  },
-  header: {
-    flex: 1,
-    flexDirection: "row",
-    justifyContent: "space-between"
+  error: {
+    fontSize: 12,
+    fontWeight: '400',
+    color: "black",
+    marginTop: 50,
+    textAlign: 'center'
   },
   list: {
-    marginTop: 40
+    flex: 0.9
   },
-  name: {
-    fontSize: 20,
-    fontWeight: '300',
-    color: "black"
-  },
-  description: {
-    fontSize: 16,
-    color: "darkgrey",
-    fontWeight: '200'
+  indicator: {
+    marginTop: 50
   }
 })
 
