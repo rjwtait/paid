@@ -18,7 +18,7 @@ export const Article = (article: ArticleProps) => (
     <TouchableHighlight onPress={() => onArticlePress(article.url)}>
         <View style={styles.item}>
             <View style={styles.header}>
-                {/*todo: if no image show error icon*/
+                {
                     article.urlToImage ?
                         <Image 
                             source={{uri: article.urlToImage}}

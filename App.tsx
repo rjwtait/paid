@@ -23,6 +23,7 @@ function App(): JSX.Element {
   const [data, setData] = React.useState([])
   const [inputText, onChangeInputText] = React.useState('');
   const [errorMessage, setErrorMessage] = React.useState('');
+  const [isLoading, setIsLoading] = React.useState(false);
 
   let flatListRef: FlatList<ArticleProps> | null = null
 
@@ -31,29 +32,31 @@ function App(): JSX.Element {
   function search(query: string): void {
     if (query.length == 0) {
       // todo: show top headlines
+      setIsLoading(false)
       Keyboard.dismiss()
       return
     }
 
-    // todo: add paging fetch(`https://newsapi.org/v2/everything?pageSize=50&page=1&q=${query}&apiKey=${API_KEY}`)
-    fetch(`https://newsapi.org/v2/everything?&q=${query}&apiKey=${API_KEY}`)
+    // todo: paging is broken on the API? Figure something out 
+    fetch(`https://newsapi.org/v2/everything?pageSize=100&page=1&q=${query}&apiKey=${API_KEY}`)
       .then((res) => res.json())
       .then((data) => {
         if (data && data.articles) {
           const filteredData = processNewsResponse(data.articles)
           setData(filteredData)
           setErrorMessage('')
-          // TODO scroll to top of list
         }
+        setIsLoading(false)
       })
       .catch((error) => {
         setData([])
         setErrorMessage(error.message)
+        setIsLoading(false)
       })
   }
 
   function onSubmit() {
-    // show a loading spinner while waiting for response
+    setIsLoading(true)
     setData([])
     Keyboard.dismiss()
     search(inputText)
@@ -75,15 +78,13 @@ function App(): JSX.Element {
         onSubmit={onSubmit}
       />
       {
-        data.length == 0 ? 
-          errorMessage.length > 0 ?
-            <Text style={styles.error}>{errorMessage}</Text>
-          : inputText.length > 0 ?
-            <ActivityIndicator style={styles.indicator} size={'large'}/>
-          :
-            <Text style={styles.error}>Please Enter A Search Term</Text> 
+        isLoading ? 
+          <ActivityIndicator style={styles.indicator} size={'large'}/>
+        : errorMessage.length > 0 ?
+          <Text style={styles.error}>{errorMessage}</Text>
+        : data.length == 0 ? 
+          <Text style={styles.error}>Please Enter A Search Term</Text> 
         :
-          // todo: handle large list size
           <FlatList
             ref={(ref) => { flatListRef = ref }}
             data={data}
